@@ -189,6 +189,7 @@ enum rockchip_pinctrl_type {
 	RV1106,
 	RV1108,
 	RV1126,
+	RV1126B,
 	RK2928,
 	RK3066B,
 	RK3128,
