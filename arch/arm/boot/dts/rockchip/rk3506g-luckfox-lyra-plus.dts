@@ -1,0 +1,33 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+/*
+ * Copyright (c) 2023 Rockchip Electronics Co., Ltd.
+ */
+
+/dts-v1/;
+
+#include "rk3506.dtsi"
+
+/ {
+	model = "Luckfox Lyra Plus";
+	compatible = "luckfox,lyra-plus", "rockchip,rk3506";
+
+	chosen {
+		stdout-path = "serial0:1500000n8";
+	};
+
+	/*
+	 * The Lyra Plus carries 128 MiB of DDR3L. The TPL/SPL rewrites this
+	 * node with the size it actually trained, so the value here only
+	 * matters when booting the DTB standalone.
+	 */
+	memory@0 {
+		device_type = "memory";
+		reg = <0x00000000 0x08000000>;
+	};
+};
+
+&uart0 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&uart0_xfer_pins>;
+	status = "okay";
+};
