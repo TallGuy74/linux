@@ -1,0 +1,305 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+/*
+ * Copyright (c) 2023 Rockchip Electronics Co., Ltd.
+ *
+ * Minimal RK3506 SoC description: only what is needed to reach a prompt on
+ * the serial console. Transcribed from the vendor 6.1 kernel,
+ * arch/arm/boot/dts/rk3502.dtsi (the real base dtsi there; rk3506.dtsi is a
+ * thin wrapper on top of it).
+ *
+ * Deliberately absent: audio, PWM, mailbox, hwspinlock, USB, flexbus,
+ * crypto, RNG, RGA, TSADC, SARADC, OTP, MMC, FSPI, DMA, I2C, SPI, uart1..5,
+ * watchdog, OPP tables, PMU, thermal and the Rockchip-only suspend and
+ * system-monitor nodes. Every one of those is a probe that can fail before
+ * the console is up.
+ */
+
+#include <dt-bindings/clock/rockchip,rk3506-cru.h>
+#include <dt-bindings/reset/rockchip,rk3506-cru.h>
+#include <dt-bindings/gpio/gpio.h>
+#include <dt-bindings/interrupt-controller/irq.h>
+#include <dt-bindings/interrupt-controller/arm-gic.h>
+#include <dt-bindings/pinctrl/rockchip.h>
+
+/ {
+	#address-cells = <1>;
+	#size-cells = <1>;
+
+	compatible = "rockchip,rk3506";
+
+	interrupt-parent = <&gic>;
+
+	aliases {
+		serial0 = &uart0;
+	};
+
+	cpus {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		cpu0: cpu@f00 {
+			device_type = "cpu";
+			compatible = "arm,cortex-a7";
+			reg = <0xf00>;
+			enable-method = "psci";
+			clocks = <&cru ARMCLK>;
+		};
+
+		cpu1: cpu@f01 {
+			device_type = "cpu";
+			compatible = "arm,cortex-a7";
+			reg = <0xf01>;
+			enable-method = "psci";
+			clocks = <&cru ARMCLK>;
+		};
+
+		cpu2: cpu@f02 {
+			device_type = "cpu";
+			compatible = "arm,cortex-a7";
+			reg = <0xf02>;
+			enable-method = "psci";
+			clocks = <&cru ARMCLK>;
+		};
+	};
+
+	psci {
+		compatible = "arm,psci-1.0";
+		method = "smc";
+	};
+
+	reserved-memory {
+		#address-cells = <1>;
+		#size-cells = <1>;
+		ranges;
+
+		/*
+		 * OP-TEE / TF-A. Do not remove: psci method = "smc" is served
+		 * from here, so handing this range to the page allocator kills
+		 * SMP bring-up and PSCI system-off.
+		 *
+		 * TODO(verify): the vendor node (rk3502.dtsi:335) has no
+		 * "no-map", so this range stays in the kernel linear map.
+		 * "no-map" is the idiomatic mainline form for a secure-world
+		 * carve-out but is untested on this SoC; kept as vendor.
+		 */
+		trust@0 {
+			reg = <0x0 0x62000>;
+		};
+
+		/*
+		 * The only way to read a panic that happened before the
+		 * console was up. Vendor also sets boot-log-size and
+		 * boot-log-count (rk3502.dtsi:352) - those are Rockchip
+		 * extensions with no mainline binding, dropped here.
+		 */
+		ramoops@83000 {
+			compatible = "ramoops";
+			reg = <0x83000 0x2d000>;
+			console-size = <0x20000>;
+			record-size = <0x1000>;
+		};
+	};
+
+	timer {
+		compatible = "arm,armv7-timer";
+		interrupts = <GIC_PPI 13 (GIC_CPU_MASK_SIMPLE(3) | IRQ_TYPE_LEVEL_HIGH)>,
+			     <GIC_PPI 14 (GIC_CPU_MASK_SIMPLE(3) | IRQ_TYPE_LEVEL_HIGH)>,
+			     <GIC_PPI 11 (GIC_CPU_MASK_SIMPLE(3) | IRQ_TYPE_LEVEL_HIGH)>,
+			     <GIC_PPI 10 (GIC_CPU_MASK_SIMPLE(3) | IRQ_TYPE_LEVEL_HIGH)>;
+		clock-frequency = <24000000>;
+	};
+
+	/*
+	 * clk_rc, xin24m and xin32k are consumed by the CRU driver through
+	 * their global names, not through a phandle, and the driver does not
+	 * register them itself:
+	 *   clk-rk3506.c:745  CLK_32K_RC ("clk_rc" parent, CLK_IS_CRITICAL)
+	 *   clk-rk3506.c:175  XIN24M_GATE ("xin24m" parent, CLK_IS_CRITICAL)
+	 *   clk-rk3506.c:145  clk_32k mux ("xin32k" parent)
+	 * All three must therefore exist in DT even though no node here has a
+	 * phandle to them. Vendor wraps them in a "clocks" simple-bus
+	 * container (rk3502.dtsi:44); flattened to the root here, which is the
+	 * mainline form and avoids dtc simple_bus_reg warnings. Same names,
+	 * same rates, same labels.
+	 */
+	clk_rc: clock-rc {
+		compatible = "fixed-clock";
+		#clock-cells = <0>;
+		clock-frequency = <400000>;
+		clock-output-names = "clk_rc";
+	};
+
+	xin24m: clock-xin24m {
+		compatible = "fixed-clock";
+		#clock-cells = <0>;
+		clock-frequency = <24000000>;
+		clock-output-names = "xin24m";
+	};
+
+	xin32k: clock-xin32k {
+		compatible = "fixed-clock";
+		#clock-cells = <0>;
+		clock-frequency = <32768>;
+		clock-output-names = "xin32k";
+	};
+
+	uart0: serial@ff0a0000 {
+		compatible = "rockchip,rk3506-uart", "snps,dw-apb-uart";
+		reg = <0xff0a0000 0x100>;
+		interrupts = <GIC_SPI 34 IRQ_TYPE_LEVEL_HIGH>;
+		reg-shift = <2>;
+		reg-io-width = <4>;
+		clocks = <&cru SCLK_UART0>, <&cru PCLK_UART0>;
+		clock-names = "baudclk", "apb_pclk";
+		pinctrl-names = "default";
+		pinctrl-0 = <&uart0_xfer_pins>;
+		status = "disabled";
+		/* vendor also wires dmas to dmac0; no DMA controller here */
+	};
+
+	grf: syscon@ff288000 {
+		compatible = "rockchip,rk3506-grf", "syscon", "simple-mfd";
+		reg = <0xff288000 0x4000>;
+	};
+
+	/* pinctrl "rockchip,grf": iomux registers for the non-PMU banks */
+	ioc_grf: syscon@ff4d8000 {
+		compatible = "rockchip,rk3506-ioc-grf", "syscon";
+		reg = <0xff4d8000 0x8000>;
+	};
+
+	gic: interrupt-controller@ff581000 {
+		compatible = "arm,gic-400";
+		reg = <0xff581000 0x1000>,
+		      <0xff582000 0x2000>,
+		      <0xff584000 0x2000>,
+		      <0xff586000 0x2000>;
+		interrupts = <GIC_PPI 9 IRQ_TYPE_LEVEL_HIGH>;
+		#interrupt-cells = <3>;
+		interrupt-controller;
+		#address-cells = <0>;
+	};
+
+	/* pinctrl "rockchip,ioc1" */
+	ioc1: syscon@ff660000 {
+		compatible = "rockchip,rk3506-ioc1", "syscon";
+		reg = <0xff660000 0x10000>;
+	};
+
+	/*
+	 * pinctrl "rockchip,rmio". Mandatory for this SoC:
+	 * pinctrl-rockchip.c returns -EINVAL when the phandle is missing,
+	 * because rk3506_pin_ctrl declares one rmio region.
+	 * The vendor reboot-mode child is dropped (needs
+	 * <dt-bindings/soc/rockchip,boot-mode.h> and adds nothing to a
+	 * console bring-up).
+	 */
+	grf_pmu: syscon@ff910000 {
+		compatible = "rockchip,rk3506-grf-pmu", "syscon", "simple-mfd";
+		reg = <0xff910000 0x4000>;
+	};
+
+	/* pinctrl "rockchip,pmu": iomux registers for the PMU bank (gpio0) */
+	ioc_pmu: syscon@ff950000 {
+		compatible = "rockchip,rk3506-ioc-pmu", "syscon";
+		reg = <0xff950000 0x10000>;
+	};
+
+	cru: clock-controller@ff9a0000 {
+		compatible = "rockchip,rk3506-cru";
+		reg = <0xff9a0000 0x20000>;
+		rockchip,grf = <&grf>;
+		#clock-cells = <1>;
+		#reset-cells = <1>;
+
+		/*
+		 * Kept from the vendor node: SCLK_UART0 can only reach
+		 * 1500000 baud through one of these fractional matrices.
+		 */
+		assigned-clocks =
+			<&cru CLK_FRAC_UART_MATRIX0>,
+			<&cru CLK_FRAC_UART_MATRIX1>;
+		assigned-clock-rates =
+			<96000000>,
+			<128000000>;
+	};
+
+	pinctrl: pinctrl {
+		compatible = "rockchip,rk3506-pinctrl";
+		rockchip,grf = <&ioc_grf>;
+		rockchip,ioc1 = <&ioc1>;
+		rockchip,pmu = <&ioc_pmu>;
+		rockchip,rmio = <&grf_pmu>;
+		#address-cells = <1>;
+		#size-cells = <1>;
+		ranges;
+
+		gpio0: gpio@ff940000 {
+			compatible = "rockchip,gpio-bank";
+			reg = <0xff940000 0x200>;
+			interrupts = <GIC_SPI 0 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&cru PCLK_GPIO0>, <&cru DBCLK_GPIO0>;
+
+			gpio-controller;
+			#gpio-cells = <2>;
+			gpio-ranges = <&pinctrl 0 0 32>;
+			interrupt-controller;
+			#interrupt-cells = <2>;
+		};
+
+		gpio1: gpio@ff870000 {
+			compatible = "rockchip,gpio-bank";
+			reg = <0xff870000 0x200>;
+			interrupts = <GIC_SPI 4 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&cru PCLK_GPIO1>, <&cru DBCLK_GPIO1>;
+
+			gpio-controller;
+			#gpio-cells = <2>;
+			gpio-ranges = <&pinctrl 0 32 32>;
+			interrupt-controller;
+			#interrupt-cells = <2>;
+		};
+
+		gpio2: gpio@ff1c0000 {
+			compatible = "rockchip,gpio-bank";
+			reg = <0xff1c0000 0x200>;
+			interrupts = <GIC_SPI 8 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&cru PCLK_GPIO2>, <&cru DBCLK_GPIO2>;
+
+			gpio-controller;
+			#gpio-cells = <2>;
+			gpio-ranges = <&pinctrl 0 64 32>;
+			interrupt-controller;
+			#interrupt-cells = <2>;
+		};
+
+		gpio3: gpio@ff1d0000 {
+			compatible = "rockchip,gpio-bank";
+			reg = <0xff1d0000 0x200>;
+			interrupts = <GIC_SPI 12 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&cru PCLK_GPIO3>, <&cru DBCLK_GPIO3>;
+
+			gpio-controller;
+			#gpio-cells = <2>;
+			gpio-ranges = <&pinctrl 0 96 32>;
+			interrupt-controller;
+			#interrupt-cells = <2>;
+		};
+
+		gpio4: gpio@ff1e0000 {
+			compatible = "rockchip,gpio-bank";
+			reg = <0xff1e0000 0x200>;
+			interrupts = <GIC_SPI 16 IRQ_TYPE_LEVEL_HIGH>;
+			clocks = <&cru PCLK_GPIO4>, <&cru DBCLK_GPIO4>;
+
+			gpio-controller;
+			#gpio-cells = <2>;
+			gpio-ranges = <&pinctrl 0 128 32>;
+			interrupt-controller;
+			#interrupt-cells = <2>;
+		};
+	};
+};
+
+#include "rk3506-pinctrl.dtsi"
+#include "rk3506-pinctrl-rmio.dtsi"
