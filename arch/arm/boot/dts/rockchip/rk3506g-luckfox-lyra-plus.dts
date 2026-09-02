@@ -51,6 +51,30 @@
 	};
 };
 
+&sfc {
+	pinctrl-names = "default";
+	pinctrl-0 = <&fspi_clk_pins &fspi_csn_pins &fspi_bus4_pins>;
+	status = "okay";
+
+	/*
+	 * 256 MiB SPI NAND, the boot medium: the BootROM and the TPL/SPL come
+	 * from here, and U-Boot reports "SPI Nand ID ef aa 22".
+	 *
+	 * Frequency and bus widths as the vendor board dts
+	 * (rk3506-luckfox-lyra.dtsi:1245-1254). The vendor node carries no
+	 * pinctrl; the three groups are named here because the binding example
+	 * does so and because relying on the bootloader having left the pins
+	 * muxed is not something to depend on.
+	 */
+	flash@0 {
+		compatible = "spi-nand";
+		reg = <0>;
+		spi-max-frequency = <80000000>;
+		spi-rx-bus-width = <4>;
+		spi-tx-bus-width = <1>;
+	};
+};
+
 &uart0 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&uart0_xfer_pins>;
