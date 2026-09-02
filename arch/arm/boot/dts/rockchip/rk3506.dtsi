@@ -77,13 +77,21 @@
 		 * from here, so handing this range to the page allocator kills
 		 * SMP bring-up and PSCI system-off.
 		 *
-		 * TODO(verify): the vendor node (rk3502.dtsi:335) has no
-		 * "no-map", so this range stays in the kernel linear map.
-		 * "no-map" is the idiomatic mainline form for a secure-world
-		 * carve-out but is untested on this SoC; kept as vendor.
+		 * no-map because the range is not merely reserved, it is
+		 * unreachable: the memory firewall rejects normal-world
+		 * access, and even a read aborts. Measured from the U-Boot
+		 * prompt, which also runs in normal world:
+		 *
+		 *     => md 0x4000 4
+		 *     00004000:data abort
+		 *
+		 * The vendor node (rk3502.dtsi:335) omits no-map and so leaves
+		 * the range in the kernel linear map, i.e. mappings that must
+		 * never be touched.
 		 */
 		trust@0 {
 			reg = <0x0 0x62000>;
+			no-map;
 		};
 
 		/*
@@ -91,6 +99,12 @@
 		 * console was up. Vendor also sets boot-log-size and
 		 * boot-log-count (rk3502.dtsi:352) - those are Rockchip
 		 * extensions with no mainline binding, dropped here.
+		 *
+		 * The address is below the 2 MiB floor that
+		 * linux,usable-memory-range establishes in the board dts, and
+		 * that is fine: capping memblock removes the range from the
+		 * allocator, not from reserved-memory. Verified on the board,
+		 * pstore comes up and uses this region.
 		 */
 		ramoops@83000 {
 			compatible = "ramoops";
