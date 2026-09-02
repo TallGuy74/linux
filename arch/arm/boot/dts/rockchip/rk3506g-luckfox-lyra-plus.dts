@@ -13,6 +13,31 @@
 
 	chosen {
 		stdout-path = "serial0:1500000n8";
+
+		/*
+		 * The bottom 2 MiB of DRAM is not available to Linux: OP-TEE
+		 * owns 0x0-0x62000 (trust@0 in rk3506.dtsi) and the memory
+		 * firewall makes it inaccessible from normal world, while the
+		 * bootloader places the kernel dtb at 0x63000 and ramoops at
+		 * 0x83000.
+		 *
+		 * memory@0 below still has to describe all of DRAM, because
+		 * that is what the TPL/SPL writes there. Without this property
+		 * AUTO_ZRELADDR derives the start of physical memory by
+		 * masking the program counter, gets 0x0, and
+		 * fdt_check_mem_start() accepts it because memory@0 starts at
+		 * 0. The decompressor then places its 16 KiB identity page
+		 * directory at zreladdr - 16384 = 0x4000 and the kernel at
+		 * 0x8000, both inside the firewalled range. Every write
+		 * aborts, in cache_on and before decompress_kernel(), so the
+		 * board dies without printing a single character - not even
+		 * with earlycon or CONFIG_DEBUG_LL.
+		 *
+		 * Same pattern, and the same 2 MiB offset, as
+		 * arch/arm/boot/dts/airoha/en7523-evb.dts, where the
+		 * bootloader installs ATF at the bottom of DRAM.
+		 */
+		linux,usable-memory-range = <0x00200000 0x07e00000>;
 	};
 
 	/*
