@@ -80,3 +80,13 @@
 	pinctrl-0 = <&uart0_xfer_pins>;
 	status = "okay";
 };
+
+/*
+ * The USB-C port. "peripheral" and nothing else, exactly as the vendor board
+ * dts (rk3506g-luckfox-lyra-plus.dts:64-67): no vbus-supply, no pinctrl - the
+ * USB data pins are dedicated, not muxed.
+ */
+&usb_otg0 {
+	dr_mode = "peripheral";
+	status = "okay";
+};
