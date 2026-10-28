@@ -127,6 +127,7 @@
 	rmii_phy0: ethernet-phy@1 {
 		compatible = "ethernet-phy-ieee802.3-c22";
 		reg = <1>;
+		clocks = <&cru CLK_MAC_OUT>;
 		reset-gpios = <&gpio1 RK_PC0 GPIO_ACTIVE_LOW>;
 		reset-assert-us = <20000>;
 		reset-deassert-us = <100000>;
@@ -147,6 +148,7 @@
 	rmii_phy1: ethernet-phy@1 {
 		compatible = "ethernet-phy-ieee802.3-c22";
 		reg = <1>;
+		clocks = <&cru CLK_MAC_OUT>;
 		reset-gpios = <&gpio1 RK_PC1 GPIO_ACTIVE_HIGH>;
 		reset-assert-us = <20000>;
 		reset-deassert-us = <100000>;
@@ -300,4 +302,18 @@
 
 &wdt0 {
 	status = "okay";
+};
+
+/*
+ * GPIO1_C5 is the power enable of the AIC8800DC Wi-Fi/BT module (the vendor
+ * tree calls it BT,power_gpio and lets rfkill raise it; the chip only shows
+ * up on the USB hub once it is high). Hold it high from boot.
+ */
+&gpio1 {
+	wifi-bt-power-hog {
+		gpio-hog;
+		gpios = <RK_PC5 GPIO_ACTIVE_HIGH>;
+		output-high;
+		line-name = "wifi-bt-power";
+	};
 };
