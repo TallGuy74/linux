@@ -565,6 +565,28 @@
 		};
 	};
 
+	can0: can@ff320000 {
+		compatible = "rockchip,rk3506-can", "rockchip,rk3576-can";
+		reg = <0xff320000 0x1000>;
+		interrupts = <GIC_SPI 45 IRQ_TYPE_LEVEL_HIGH>;
+		clocks = <&cru CLK_CAN0>, <&cru HCLK_CAN0>;
+		clock-names = "baudclk", "apb_pclk";
+		resets = <&cru SRST_CAN0>, <&cru SRST_H_CAN0>;
+		reset-names = "can", "can-apb";
+		status = "disabled";
+	};
+
+	can1: can@ff330000 {
+		compatible = "rockchip,rk3506-can", "rockchip,rk3576-can";
+		reg = <0xff330000 0x1000>;
+		interrupts = <GIC_SPI 46 IRQ_TYPE_LEVEL_HIGH>;
+		clocks = <&cru CLK_CAN1>, <&cru HCLK_CAN1>;
+		clock-names = "baudclk", "apb_pclk";
+		resets = <&cru SRST_CAN1>, <&cru SRST_H_CAN1>;
+		reset-names = "can", "can-apb";
+		status = "disabled";
+	};
+
 	sdmmc: mmc@ff480000 {
 		compatible = "rockchip,rk3506-dw-mshc", "rockchip,rk3288-dw-mshc";
 		reg = <0xff480000 0x4000>;
