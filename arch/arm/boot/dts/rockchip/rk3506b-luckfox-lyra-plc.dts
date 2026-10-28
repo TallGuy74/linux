@@ -247,6 +247,8 @@
 		/* fbtft (staging) properties; the sitronix,st7789v panel schema does not know them */
 		buswidth = <8>;
 		fps = <60>;
+		/* 170x320 glass mounted landscape: rotate the framebuffer (degrees) */
+		rotate = <270>;
 		dc-gpios = <&gpio0 RK_PA2 GPIO_ACTIVE_HIGH>;
 		reset-gpios = <&gpio0 RK_PA0 GPIO_ACTIVE_LOW>;
 	};
