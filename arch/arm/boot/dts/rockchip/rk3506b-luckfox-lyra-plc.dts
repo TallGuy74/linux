@@ -47,6 +47,19 @@
 		};
 	};
 
+	/*
+	 * GPIO1_C5 is the power enable of the AIC8800DC Wi-Fi/BT module (the
+	 * vendor tree calls it BT,power_gpio and lets rfkill raise it; the chip
+	 * only shows up on the USB hub once it is high). The module carries
+	 * both radios, so this one switch cuts Bluetooth too.
+	 */
+	rfkill-wlan {
+		compatible = "rfkill-gpio";
+		label = "aic8800-power";
+		radio-type = "wlan";
+		shutdown-gpios = <&gpio1 RK_PC5 GPIO_ACTIVE_HIGH>;
+	};
+
 	backlight: backlight {
 		compatible = "pwm-backlight";
 		pwms = <&pwm0_4ch_2 0 25000 PWM_POLARITY_INVERTED>;
@@ -111,6 +124,18 @@
 		regulator-max-microvolt = <1207000>;
 		vin-supply = <&vcc_sys>;
 	};
+};
+
+&cpu0 {
+	cpu-supply = <&vdd_cpu>;
+};
+
+&cpu1 {
+	cpu-supply = <&vdd_cpu>;
+};
+
+&cpu2 {
+	cpu-supply = <&vdd_cpu>;
 };
 
 &gmac0 {
@@ -312,16 +337,3 @@
 	status = "okay";
 };
 
-/*
- * GPIO1_C5 is the power enable of the AIC8800DC Wi-Fi/BT module (the vendor
- * tree calls it BT,power_gpio and lets rfkill raise it; the chip only shows
- * up on the USB hub once it is high). Hold it high from boot.
- */
-&gpio1 {
-	wifi-bt-power-hog {
-		gpio-hog;
-		gpios = <RK_PC5 GPIO_ACTIVE_HIGH>;
-		output-high;
-		line-name = "wifi-bt-power";
-	};
-};
