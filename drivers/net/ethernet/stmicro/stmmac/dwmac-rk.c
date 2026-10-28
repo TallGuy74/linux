@@ -1139,12 +1139,23 @@ static int rk_gmac_clk_init(struct plat_stmmacenet_data *plat)
 		clk_set_rate(plat->stmmac_clk, 50000000);
 	}
 
-	if (plat->phy_node && bsp_priv->integrated_phy) {
+	if (plat->phy_node) {
+		/*
+		 * The integrated PHY needs its 50 MHz clock; an external PHY
+		 * may describe a reference clock it gets from the SoC
+		 * (e.g. the 25 MHz CLK_MAC_OUT of RK3506 boards), which has
+		 * to stay running at the rate the device tree assigned.
+		 */
 		bsp_priv->clk_phy = of_clk_get(plat->phy_node, 0);
-		ret = PTR_ERR_OR_ZERO(bsp_priv->clk_phy);
-		if (ret)
-			return dev_err_probe(dev, ret, "Cannot get PHY clock\n");
-		clk_set_rate(bsp_priv->clk_phy, 50000000);
+		if (IS_ERR(bsp_priv->clk_phy)) {
+			ret = PTR_ERR(bsp_priv->clk_phy);
+			bsp_priv->clk_phy = NULL;
+			if (bsp_priv->integrated_phy)
+				return dev_err_probe(dev, ret,
+						     "Cannot get PHY clock\n");
+		} else if (bsp_priv->integrated_phy) {
+			clk_set_rate(bsp_priv->clk_phy, 50000000);
+		}
 	}
 
 	return 0;
