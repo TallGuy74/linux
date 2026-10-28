@@ -13,6 +13,7 @@
 #include <linux/interrupt.h>
 #include <linux/completion.h>
 #include <linux/module.h>
+#include <linux/property.h>
 
 #include <video/mipi_display.h>
 
@@ -140,9 +141,91 @@ static int init_tearing_effect_line(struct fbtft_par *par)
  *
  * Return: 0 on success, < 0 if error occurred.
  */
+/* Controller RAM is 240x320; smaller glass sits somewhere inside it. */
+#define ST7789V_RAM_WIDTH	240
+#define ST7789V_RAM_HEIGHT	320
+
+/**
+ * struct st7789v_priv - per-panel data
+ * @col_offset: first visible RAM column in the panel's native orientation
+ * @row_offset: first visible RAM row in the panel's native orientation
+ */
+struct st7789v_priv {
+	u32 col_offset;
+	u32 row_offset;
+};
+
+/**
+ * set_addr_win() - set the RAM window, shifted to where the glass is
+ *
+ * @par: FBTFT parameter object
+ * @xs: first framebuffer column
+ * @ys: first framebuffer row
+ * @xe: last framebuffer column
+ * @ye: last framebuffer row
+ *
+ * Panels smaller than the controller's 240x320 RAM (a 1.9" 170x320 glass
+ * for instance) are mapped at an offset inside it. Take that offset from the
+ * "col-offset"/"row-offset" properties (native orientation) and apply it to
+ * the column/page addresses, following the axis swap and mirroring that
+ * set_var() programs for the rotation.
+ */
+static void set_addr_win(struct fbtft_par *par, int xs, int ys, int xe, int ye)
+{
+	struct st7789v_priv *priv = par->extra;
+	unsigned int width = par->info->var.xres;
+	unsigned int height = par->info->var.yres;
+	u32 col = 0, row = 0;
+
+	if (priv) {
+		switch (par->info->var.rotate) {
+		case 0:
+			col = priv->col_offset;
+			row = priv->row_offset;
+			break;
+		case 90:
+			/* MV|MY: columns run along RAM rows, mirrored */
+			col = ST7789V_RAM_HEIGHT - width - priv->row_offset;
+			row = priv->col_offset;
+			break;
+		case 180:
+			col = ST7789V_RAM_WIDTH - width - priv->col_offset;
+			row = ST7789V_RAM_HEIGHT - height - priv->row_offset;
+			break;
+		case 270:
+			/* MV|MX: columns run along RAM rows, rows mirrored */
+			col = priv->row_offset;
+			row = ST7789V_RAM_WIDTH - height - priv->col_offset;
+			break;
+		}
+	}
+
+	xs += col;
+	xe += col;
+	ys += row;
+	ye += row;
+
+	write_reg(par, MIPI_DCS_SET_COLUMN_ADDRESS,
+		  (xs >> 8) & 0xFF, xs & 0xFF, (xe >> 8) & 0xFF, xe & 0xFF);
+	write_reg(par, MIPI_DCS_SET_PAGE_ADDRESS,
+		  (ys >> 8) & 0xFF, ys & 0xFF, (ye >> 8) & 0xFF, ye & 0xFF);
+	write_reg(par, MIPI_DCS_WRITE_MEMORY_START);
+}
+
 static int init_display(struct fbtft_par *par)
 {
+	struct device *dev = par->info->device;
+	struct st7789v_priv *priv;
 	int rc;
+
+	if (!par->extra) {
+		priv = devm_kzalloc(dev, sizeof(*priv), GFP_KERNEL);
+		if (!priv)
+			return -ENOMEM;
+		device_property_read_u32(dev, "col-offset", &priv->col_offset);
+		device_property_read_u32(dev, "row-offset", &priv->row_offset);
+		par->extra = priv;
+	}
 
 	par->fbtftops.reset(par);
 
@@ -376,6 +459,7 @@ static struct fbtft_display display = {
 	.fbtftops = {
 		.init_display = init_display,
 		.write_vmem = write_vmem,
+		.set_addr_win = set_addr_win,
 		.set_var = set_var,
 		.set_gamma = set_gamma,
 		.blank = blank,
