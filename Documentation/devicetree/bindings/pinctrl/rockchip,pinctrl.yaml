@@ -76,6 +76,13 @@ properties:
       some SoCs (e.g. rk3506) to configure the secondary block-level
       pinmux functions.
 
+  rockchip,ioc1:
+    $ref: /schemas/types.yaml#/definitions/phandle
+    description:
+      The phandle of the syscon node for the second IOC register block,
+      which on the rk3506 holds the iomux and pin configuration of the
+      GPIO banks that are not covered by the GRF.
+
   "#address-cells":
     enum: [1, 2]
 
