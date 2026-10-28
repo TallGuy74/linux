@@ -210,6 +210,8 @@ struct rockchip_thermal_data {
 #define TSADCV2_AUTO_PERIOD_HT			0x6c
 #define TSADCV3_AUTO_PERIOD			0x154
 #define TSADCV3_AUTO_PERIOD_HT			0x158
+#define TSADCV9_Q_MAX				0x210
+#define TSADCV9_Q_MAX_VAL			0x3ff /* 10 bit */
 
 #define TSADCV2_AUTO_EN				BIT(0)
 #define TSADCV2_AUTO_EN_MASK			BIT(16)
@@ -240,6 +242,7 @@ struct rockchip_thermal_data {
 #define TSADCV2_AUTO_PERIOD_HT_TIME		50  /* 50ms */
 #define TSADCV3_AUTO_PERIOD_TIME		1875 /* 2.5ms */
 #define TSADCV3_AUTO_PERIOD_HT_TIME		1875 /* 2.5ms */
+#define TSADCV9_AUTO_PERIOD_TIME		2500 /* 2.5ms */
 
 #define TSADCV5_AUTO_PERIOD_TIME		1622 /* 2.5ms */
 #define TSADCV5_AUTO_PERIOD_HT_TIME		1622 /* 2.5ms */
@@ -256,6 +259,9 @@ struct rockchip_thermal_data {
 #define PX30_GRF_SOC_CON2			0x0408
 
 #define RK3568_GRF_TSADC_CON			0x0600
+#define RK3506_GRF_TSADC_CON			0x10
+#define RK3506_GRF_TSADC_TSEN			(0x10001 << 8)
+#define RK3506_GRF_TSADC_ANA			(0xff0007 << 0)
 #define RK3568_GRF_TSADC_ANA_REG0		(0x10001 << 0)
 #define RK3568_GRF_TSADC_ANA_REG1		(0x10001 << 1)
 #define RK3568_GRF_TSADC_ANA_REG2		(0x10001 << 2)
@@ -844,6 +850,27 @@ static void rk_tsadcv7_initialize(struct regmap *grf, void __iomem *regs,
 	}
 }
 
+static void rk_tsadcv9_initialize(struct regmap *grf, void __iomem *regs,
+				  enum tshut_polarity tshut_polarity)
+{
+	/* Enable the temperature sensor and its analogue block through the GRF */
+	regmap_write(grf, RK3506_GRF_TSADC_CON, RK3506_GRF_TSADC_TSEN);
+	udelay(10);
+	regmap_write(grf, RK3506_GRF_TSADC_CON, RK3506_GRF_TSADC_ANA);
+	udelay(100);
+
+	writel_relaxed(TSADCV9_AUTO_PERIOD_TIME, regs + TSADCV3_AUTO_PERIOD);
+	writel_relaxed(TSADCV9_AUTO_PERIOD_TIME, regs + TSADCV3_AUTO_PERIOD_HT);
+	writel_relaxed(TSADCV2_HIGHT_INT_DEBOUNCE_COUNT, regs + TSADCV3_HIGHT_INT_DEBOUNCE);
+	writel_relaxed(TSADCV2_HIGHT_TSHUT_DEBOUNCE_COUNT, regs + TSADCV3_HIGHT_TSHUT_DEBOUNCE);
+	writel_relaxed(TSADCV9_Q_MAX_VAL, regs + TSADCV9_Q_MAX);
+	if (tshut_polarity == TSHUT_HIGH_ACTIVE)
+		writel_relaxed(TSADCV2_AUTO_TSHUT_POLARITY_HIGH | TSADCV2_AUTO_TSHUT_POLARITY_MASK,
+			       regs + TSADCV2_AUTO_CON);
+	else
+		writel_relaxed(TSADCV2_AUTO_TSHUT_POLARITY_MASK, regs + TSADCV2_AUTO_CON);
+}
+
 static void rk_tsadcv8_initialize(struct regmap *grf, void __iomem *regs,
 				  enum tshut_polarity tshut_polarity)
 {
@@ -1303,6 +1330,41 @@ static const struct rockchip_tsadc_chip rk3568_tsadc_data = {
 	},
 };
 
+static const struct tsadc_table rk3506_code_table[] = {
+	{0, -40000},
+	{362, -40000},
+	{395, -40000},
+	{503, 25000},
+	{528, 40000},
+	{679, 125000},
+	{TSADCV3_DATA_MASK, 125000},
+};
+
+static const struct rockchip_tsadc_chip rk3506_tsadc_data = {
+	/* cpu */
+	.chn_offset = 0,
+	.chn_num = 1, /* one channel for tsadc */
+	.grf_required = true,
+	.tshut_mode = TSHUT_MODE_CRU, /* default TSHUT via CRU */
+	.tshut_polarity = TSHUT_LOW_ACTIVE, /* default TSHUT LOW ACTIVE */
+	.tshut_temp = 95000,
+	.initialize = rk_tsadcv9_initialize,
+	.irq_ack = rk_tsadcv4_irq_ack,
+	.control = rk_tsadcv4_control,
+	.get_temp = rk_tsadcv4_get_temp,
+	.set_alarm_temp = rk_tsadcv3_alarm_temp,
+	.set_tshut_temp = rk_tsadcv3_tshut_temp,
+	.set_tshut_mode = rk_tsadcv4_tshut_mode,
+	.get_trim_code = rk_tsadcv2_get_trim_code,
+	.trim_slope = 594,
+	.table = {
+		.id = rk3506_code_table,
+		.length = ARRAY_SIZE(rk3506_code_table),
+		.data_mask = TSADCV3_DATA_MASK,
+		.mode = ADC_INCREMENT,
+	},
+};
+
 static const struct rockchip_tsadc_chip rk3576_tsadc_data = {
 	/* top, big_core, little_core, ddr, npu, gpu */
 	.chn_offset = 0,
@@ -1386,6 +1448,10 @@ static const struct of_device_id of_rockchip_thermal_match[] = {
 	{
 		.compatible = "rockchip,rk3568-tsadc",
 		.data = (void *)&rk3568_tsadc_data,
+	},
+	{
+		.compatible = "rockchip,rk3506-tsadc",
+		.data = (void *)&rk3506_tsadc_data,
 	},
 	{
 		.compatible = "rockchip,rk3576-tsadc",
