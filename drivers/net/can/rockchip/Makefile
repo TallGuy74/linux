@@ -8,3 +8,4 @@ rockchip_canfd-objs += rockchip_canfd-ethtool.o
 rockchip_canfd-objs += rockchip_canfd-rx.o
 rockchip_canfd-objs += rockchip_canfd-timestamp.o
 rockchip_canfd-objs += rockchip_canfd-tx.o
+obj-$(CONFIG_CAN_ROCKCHIP_RK3576) += rk3576_can.o
