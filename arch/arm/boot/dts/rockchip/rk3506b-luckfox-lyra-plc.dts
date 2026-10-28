@@ -11,6 +11,7 @@
 #include <dt-bindings/interrupt-controller/irq.h>
 #include <dt-bindings/leds/common.h>
 #include <dt-bindings/pinctrl/rockchip.h>
+#include <dt-bindings/pwm/pwm.h>
 #include "rk3506.dtsi"
 
 / {
@@ -48,8 +49,10 @@
 
 	backlight: backlight {
 		compatible = "pwm-backlight";
-		/* pwm0 channel 2 on RM_IO5; no PWM driver upstream yet for this block */
-		status = "disabled";
+		pwms = <&pwm0_4ch_2 0 25000 PWM_POLARITY_INVERTED>;
+		brightness-levels = <0 20 40 60 80 100 120 140 160 180 200 220 240 255>;
+		default-brightness-level = <10>;
+		power-supply = <&vcc_3v3>;
 	};
 
 	leds {
@@ -90,6 +93,23 @@
 		regulator-min-microvolt = <1800000>;
 		regulator-max-microvolt = <1800000>;
 		vin-supply = <&vcc_3v3>;
+	};
+
+	/*
+	 * The core voltage is a PWM-driven buck: pwm0 channel 0 on RM_IO21,
+	 * 5 us period, inverted. U-Boot sets it up; Linux keeps the PWM
+	 * running and leaves the voltage alone until an OPP table asks for
+	 * more.
+	 */
+	vdd_cpu: regulator-vdd-cpu {
+		compatible = "pwm-regulator";
+		pwms = <&pwm0_4ch_0 0 5000 PWM_POLARITY_INVERTED>;
+		regulator-name = "vdd_cpu";
+		regulator-always-on;
+		regulator-boot-on;
+		regulator-min-microvolt = <710000>;
+		regulator-max-microvolt = <1207000>;
+		vin-supply = <&vcc_sys>;
 	};
 };
 
@@ -177,6 +197,18 @@
 		compatible = "sensirion,shtc3";
 		reg = <0x70>;
 	};
+};
+
+&pwm0_4ch_0 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&rm_io21_pwm0_ch0>;
+	status = "okay";
+};
+
+&pwm0_4ch_2 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&rm_io5_pwm0_ch2>;
+	status = "okay";
 };
 
 &saradc {
