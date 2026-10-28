@@ -15,6 +15,11 @@ properties:
       - items:
           - enum:
               - rockchip,rk3288-sgrf
+              - rockchip,rk3506-grf
+              - rockchip,rk3506-grf-pmu
+              - rockchip,rk3506-ioc-grf
+              - rockchip,rk3506-ioc-pmu
+              - rockchip,rk3506-ioc1
               - rockchip,rk3528-ioc-grf
               - rockchip,rk3528-pipe-phy-grf
               - rockchip,rk3528-vo-grf

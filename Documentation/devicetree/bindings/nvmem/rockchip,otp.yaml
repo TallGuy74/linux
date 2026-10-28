@@ -14,6 +14,7 @@ properties:
     enum:
       - rockchip,px30-otp
       - rockchip,rk3308-otp
+      - rockchip,rk3506-otp
       - rockchip,rk3528-otp
       - rockchip,rk3562-otp
       - rockchip,rk3568-otp
@@ -78,6 +79,7 @@ allOf:
         compatible:
           contains:
             enum:
+              - rockchip,rk3506-otp
               - rockchip,rk3528-otp
     then:
       properties:

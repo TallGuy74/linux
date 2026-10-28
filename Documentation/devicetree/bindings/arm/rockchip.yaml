@@ -837,6 +837,16 @@ properties:
           - const: luckfox,core3576
           - const: rockchip,rk3576
 
+      - description: Luckfox Lyra PLC
+        items:
+          - const: luckfox,lyra-plc
+          - const: rockchip,rk3506
+
+      - description: Luckfox Lyra Plus
+        items:
+          - const: luckfox,lyra-plus
+          - const: rockchip,rk3506
+
       - description: Lunzn FastRhino R66S / R68S
         items:
           - enum:

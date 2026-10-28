@@ -20,6 +20,7 @@ properties:
       - rockchip,rk3328-tsadc
       - rockchip,rk3368-tsadc
       - rockchip,rk3399-tsadc
+      - rockchip,rk3506-tsadc
       - rockchip,rk3568-tsadc
       - rockchip,rk3576-tsadc
       - rockchip,rk3588-tsadc
@@ -127,6 +128,7 @@ allOf:
               - rockchip,px30-tsadc
               - rockchip,rk3366-tsadc
               - rockchip,rk3399-tsadc
+              - rockchip,rk3506-tsadc
               - rockchip,rk3568-tsadc
     then:
       required:
