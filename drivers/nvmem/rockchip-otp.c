@@ -337,6 +337,14 @@ static const char * const rk3528_otp_clocks[] = {
 	"otp", "apb_pclk", "sbpi",
 };
 
+static const struct rockchip_data rk3506_data = {
+	.size = 0x78,
+	.word_size = sizeof(u16),
+	.clks = rk3528_otp_clocks,
+	.num_clks = ARRAY_SIZE(rk3528_otp_clocks),
+	.reg_read = rk3568_otp_read,
+};
+
 static const struct rockchip_data rk3528_data = {
 	.size = 0x80,
 	.word_size = sizeof(u16),
@@ -387,6 +395,10 @@ static const struct of_device_id rockchip_otp_match[] = {
 	{
 		.compatible = "rockchip,rk3308-otp",
 		.data = &px30_data,
+	},
+	{
+		.compatible = "rockchip,rk3506-otp",
+		.data = &rk3506_data,
 	},
 	{
 		.compatible = "rockchip,rk3528-otp",
