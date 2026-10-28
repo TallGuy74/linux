@@ -30,7 +30,13 @@
 	interrupt-parent = <&gic>;
 
 	aliases {
+		i2c0 = &i2c0;
+		i2c1 = &i2c1;
+		i2c2 = &i2c2;
 		serial0 = &uart0;
+		serial1 = &uart1;
+		serial2 = &uart2;
+		spi0 = &spi0;
 	};
 
 	cpus {
@@ -172,7 +178,7 @@
 	};
 
 	grf: syscon@ff288000 {
-		compatible = "rockchip,rk3506-grf", "syscon", "simple-mfd";
+		compatible = "rockchip,rk3506-grf", "syscon";
 		reg = <0xff288000 0x4000>;
 	};
 
@@ -244,9 +250,302 @@
 		interrupts = <GIC_SPI 74 IRQ_TYPE_LEVEL_HIGH>;
 		clocks = <&cru HCLK_USBOTG0>;
 		clock-names = "otg";
+		dr_mode = "otg";
 		g-np-tx-fifo-size = <16>;
 		g-rx-fifo-size = <280>;
 		g-tx-fifo-size = <256 128 128 64 32 16>;
+		phys = <&u2phy_otg0>;
+		phy-names = "usb2-phy";
+		status = "disabled";
+	};
+
+
+	dmac0: dma-controller@ff000000 {
+		compatible = "arm,pl330", "arm,primecell";
+		reg = <0xff000000 0x4000>;
+		interrupts = <GIC_SPI 116 IRQ_TYPE_LEVEL_HIGH>,
+			     <GIC_SPI 117 IRQ_TYPE_LEVEL_HIGH>;
+		clocks = <&cru ACLK_DMAC0>;
+		clock-names = "apb_pclk";
+		#dma-cells = <1>;
+		arm,pl330-periph-burst;
+	};
+
+	dmac1: dma-controller@ff008000 {
+		compatible = "arm,pl330", "arm,primecell";
+		reg = <0xff008000 0x4000>;
+		interrupts = <GIC_SPI 118 IRQ_TYPE_LEVEL_HIGH>,
+			     <GIC_SPI 119 IRQ_TYPE_LEVEL_HIGH>;
+		clocks = <&cru ACLK_DMAC1>;
+		clock-names = "apb_pclk";
+		#dma-cells = <1>;
+		arm,pl330-periph-burst;
+	};
+
+	i2c0: i2c@ff040000 {
+		compatible = "rockchip,rk3506-i2c", "rockchip,rk3399-i2c";
+		reg = <0xff040000 0x1000>;
+		interrupts = <GIC_SPI 40 IRQ_TYPE_LEVEL_HIGH>;
+		clocks = <&cru CLK_I2C0>, <&cru PCLK_I2C0>;
+		clock-names = "i2c", "pclk";
+		#address-cells = <1>;
+		#size-cells = <0>;
+		status = "disabled";
+	};
+
+	i2c1: i2c@ff050000 {
+		compatible = "rockchip,rk3506-i2c", "rockchip,rk3399-i2c";
+		reg = <0xff050000 0x1000>;
+		interrupts = <GIC_SPI 41 IRQ_TYPE_LEVEL_HIGH>;
+		clocks = <&cru CLK_I2C1>, <&cru PCLK_I2C1>;
+		clock-names = "i2c", "pclk";
+		#address-cells = <1>;
+		#size-cells = <0>;
+		status = "disabled";
+	};
+
+	i2c2: i2c@ff060000 {
+		compatible = "rockchip,rk3506-i2c", "rockchip,rk3399-i2c";
+		reg = <0xff060000 0x1000>;
+		interrupts = <GIC_SPI 42 IRQ_TYPE_LEVEL_HIGH>;
+		clocks = <&cru CLK_I2C2>, <&cru PCLK_I2C2>;
+		clock-names = "i2c", "pclk";
+		#address-cells = <1>;
+		#size-cells = <0>;
+		status = "disabled";
+	};
+
+	uart1: serial@ff0b0000 {
+		compatible = "rockchip,rk3506-uart", "snps,dw-apb-uart";
+		reg = <0xff0b0000 0x100>;
+		interrupts = <GIC_SPI 35 IRQ_TYPE_LEVEL_HIGH>;
+		clocks = <&cru SCLK_UART1>, <&cru PCLK_UART1>;
+		clock-names = "baudclk", "apb_pclk";
+		reg-shift = <2>;
+		reg-io-width = <4>;
+		status = "disabled";
+	};
+
+	uart2: serial@ff0c0000 {
+		compatible = "rockchip,rk3506-uart", "snps,dw-apb-uart";
+		reg = <0xff0c0000 0x100>;
+		interrupts = <GIC_SPI 36 IRQ_TYPE_LEVEL_HIGH>;
+		clocks = <&cru SCLK_UART2>, <&cru PCLK_UART2>;
+		clock-names = "baudclk", "apb_pclk";
+		reg-shift = <2>;
+		reg-io-width = <4>;
+		status = "disabled";
+	};
+
+	spi0: spi@ff120000 {
+		compatible = "rockchip,rk3506-spi", "rockchip,rk3066-spi";
+		reg = <0xff120000 0x1000>;
+		interrupts = <GIC_SPI 43 IRQ_TYPE_LEVEL_HIGH>;
+		clocks = <&cru CLK_SPI0>, <&cru PCLK_SPI0>;
+		clock-names = "spiclk", "apb_pclk";
+		#address-cells = <1>;
+		#size-cells = <0>;
+		status = "disabled";
+	};
+
+	wdt0: watchdog@ff260000 {
+		compatible = "rockchip,rk3506-wdt", "snps,dw-wdt";
+		reg = <0xff260000 0x100>;
+		interrupts = <GIC_SPI 107 IRQ_TYPE_LEVEL_HIGH>;
+		clocks = <&cru TCLK_WDT0>, <&cru PCLK_WDT0>;
+		clock-names = "tclk", "pclk";
+		status = "disabled";
+	};
+
+	u2phy: usb2phy@ff2b0000 {
+		compatible = "rockchip,rk3506-usb2phy";
+		reg = <0xff2b0000 0x8000>;
+		clocks = <&cru CLK_REF_USBPHY_TOP>, <&cru PCLK_USBPHY>;
+		clock-names = "phyclk", "pclk";
+		clock-output-names = "usb480m_phy";
+		#clock-cells = <0>;
+		rockchip,usbgrf = <&grf>;
+		status = "disabled";
+
+		u2phy_otg0: otg-port {
+			#phy-cells = <0>;
+			interrupts = <GIC_SPI 75 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 76 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 77 IRQ_TYPE_LEVEL_HIGH>;
+			interrupt-names = "otg-bvalid", "otg-id", "linestate";
+			status = "disabled";
+		};
+
+		u2phy_otg1: host-port {
+			#phy-cells = <0>;
+			interrupts = <GIC_SPI 82 IRQ_TYPE_LEVEL_HIGH>;
+			interrupt-names = "linestate";
+			status = "disabled";
+		};
+	};
+
+	sdmmc: mmc@ff480000 {
+		compatible = "rockchip,rk3506-dw-mshc", "rockchip,rk3288-dw-mshc";
+		reg = <0xff480000 0x4000>;
+		interrupts = <GIC_SPI 86 IRQ_TYPE_LEVEL_HIGH>;
+		clocks = <&cru HCLK_SDMMC>, <&cru CCLK_SRC_SDMMC>;
+		clock-names = "biu", "ciu";
+		fifo-depth = <0x100>;
+		max-frequency = <150000000>;
+		resets = <&cru SRST_H_SDMMC>;
+		reset-names = "reset";
+		status = "disabled";
+	};
+
+	gmac0: ethernet@ff4c8000 {
+		compatible = "rockchip,rk3506-gmac", "snps,dwmac-4.20a";
+		reg = <0xff4c8000 0x2000>;
+		interrupts = <GIC_SPI 66 IRQ_TYPE_LEVEL_HIGH>,
+			     <GIC_SPI 69 IRQ_TYPE_LEVEL_HIGH>;
+		interrupt-names = "macirq", "eth_wake_irq";
+		clocks = <&cru CLK_MAC0>, <&cru CLK_MAC0_PTP>,
+			 <&cru PCLK_MAC0>, <&cru ACLK_MAC0>,
+			 <&cru CLK_MAC_OUT>;
+		clock-names = "stmmaceth", "ptp_ref", "pclk_mac", "aclk_mac", "clk_mac_out";
+		resets = <&cru SRST_A_MAC0>;
+		reset-names = "stmmaceth";
+		rockchip,grf = <&grf>;
+		snps,axi-config = <&gmac0_stmmac_axi_setup>;
+		snps,mixed-burst;
+		snps,mtl-rx-config = <&gmac0_mtl_rx_setup>;
+		snps,mtl-tx-config = <&gmac0_mtl_tx_setup>;
+		snps,tso;
+		status = "disabled";
+
+		mdio0: mdio {
+			compatible = "snps,dwmac-mdio";
+			#address-cells = <0x1>;
+			#size-cells = <0x0>;
+		};
+
+		gmac0_stmmac_axi_setup: stmmac-axi-config {
+			snps,blen = <0 0 0 0 16 8 4>;
+			snps,rd_osr_lmt = <8>;
+			snps,wr_osr_lmt = <4>;
+		};
+
+		gmac0_mtl_rx_setup: rx-queues-config {
+			snps,rx-queues-to-use = <1>;
+			queue0 {};
+		};
+
+		gmac0_mtl_tx_setup: tx-queues-config {
+			snps,tx-queues-to-use = <1>;
+			queue0 {};
+		};
+	};
+
+	gmac1: ethernet@ff4d0000 {
+		compatible = "rockchip,rk3506-gmac", "snps,dwmac-4.20a";
+		reg = <0xff4d0000 0x2000>;
+		interrupts = <GIC_SPI 70 IRQ_TYPE_LEVEL_HIGH>,
+			     <GIC_SPI 73 IRQ_TYPE_LEVEL_HIGH>;
+		interrupt-names = "macirq", "eth_wake_irq";
+		clocks = <&cru CLK_MAC1>, <&cru CLK_MAC1_PTP>,
+			 <&cru PCLK_MAC1>, <&cru ACLK_MAC1>,
+			 <&cru CLK_MAC_OUT>;
+		clock-names = "stmmaceth", "ptp_ref", "pclk_mac", "aclk_mac", "clk_mac_out";
+		resets = <&cru SRST_A_MAC1>;
+		reset-names = "stmmaceth";
+		rockchip,grf = <&grf>;
+		snps,axi-config = <&gmac1_stmmac_axi_setup>;
+		snps,mixed-burst;
+		snps,mtl-rx-config = <&gmac1_mtl_rx_setup>;
+		snps,mtl-tx-config = <&gmac1_mtl_tx_setup>;
+		snps,tso;
+		status = "disabled";
+
+		mdio1: mdio {
+			compatible = "snps,dwmac-mdio";
+			#address-cells = <0x1>;
+			#size-cells = <0x0>;
+		};
+
+		gmac1_stmmac_axi_setup: stmmac-axi-config {
+			snps,blen = <0 0 0 0 16 8 4>;
+			snps,rd_osr_lmt = <8>;
+			snps,wr_osr_lmt = <4>;
+		};
+
+		gmac1_mtl_rx_setup: rx-queues-config {
+			snps,rx-queues-to-use = <1>;
+			queue0 {};
+		};
+
+		gmac1_mtl_tx_setup: tx-queues-config {
+			snps,tx-queues-to-use = <1>;
+			queue0 {};
+		};
+	};
+
+	saradc: adc@ff4e8000 {
+		compatible = "rockchip,rk3506-saradc", "rockchip,rk3528-saradc";
+		reg = <0xff4e8000 0x8000>;
+		interrupts = <GIC_SPI 57 IRQ_TYPE_LEVEL_HIGH>;
+		clocks = <&cru CLK_SARADC>, <&cru PCLK_SARADC>;
+		clock-names = "saradc", "apb_pclk";
+		resets = <&cru SRST_P_SARADC>;
+		reset-names = "saradc-apb";
+		#io-channel-cells = <1>;
+		status = "disabled";
+	};
+
+	otp: efuse@ff4f0000 {
+		compatible = "rockchip,rk3506-otp";
+		reg = <0xff4f0000 0x4000>;
+		clocks = <&cru CLK_USER_OTPC_NS>, <&cru PCLK_OTPC_NS>,
+			 <&cru CLK_SBPI_OTPC_NS>;
+		clock-names = "otp", "apb_pclk", "sbpi";
+		resets = <&cru SRST_USER_OTPC_NS>, <&cru SRST_P_OTPC_NS>,
+			 <&cru SRST_SBPI_OTPC_NS>;
+		reset-names = "otp", "apb", "sbpi";
+		#address-cells = <1>;
+		#size-cells = <1>;
+
+		cpu_code: cpu-code@2 {
+			reg = <0x02 0x2>;
+		};
+
+		cpu_id: id@a {
+			reg = <0x0a 0x10>;
+		};
+	};
+
+	tsadc: tsadc@ff650000 {
+		compatible = "rockchip,rk3506-tsadc";
+		reg = <0xff650000 0x400>;
+		interrupts = <GIC_SPI 58 IRQ_TYPE_LEVEL_HIGH>;
+		clocks = <&cru CLK_TSADC>, <&cru PCLK_TSADC>;
+		clock-names = "tsadc", "apb_pclk";
+		assigned-clocks = <&cru CLK_TSADC>, <&cru CLK_TSADC_TSEN>;
+		assigned-clock-rates = <1000000>, <12000000>;
+		resets = <&cru SRST_P_TSADC>, <&cru SRST_TSADC>;
+		reset-names = "tsadc-apb", "tsadc";
+		rockchip,grf = <&grf>;
+		rockchip,hw-tshut-temp = <120000>;
+		rockchip,hw-tshut-mode = <0>;
+		rockchip,hw-tshut-polarity = <0>;
+		#thermal-sensor-cells = <1>;
+		status = "disabled";
+	};
+
+	usb_otg1: usb@ff780000 {
+		compatible = "rockchip,rk3066-usb", "snps,dwc2";
+		reg = <0xff780000 0x40000>;
+		interrupts = <GIC_SPI 79 IRQ_TYPE_LEVEL_HIGH>;
+		clocks = <&cru HCLK_USBOTG1>;
+		clock-names = "otg";
+		dr_mode = "otg";
+		g-np-tx-fifo-size = <16>;
+		g-rx-fifo-size = <280>;
+		g-tx-fifo-size = <256 128 128 64 32 16>;
+		phys = <&u2phy_otg1>;
+		phy-names = "usb2-phy";
 		status = "disabled";
 	};
 
@@ -259,7 +558,7 @@
 	 * console bring-up).
 	 */
 	grf_pmu: syscon@ff910000 {
-		compatible = "rockchip,rk3506-grf-pmu", "syscon", "simple-mfd";
+		compatible = "rockchip,rk3506-grf-pmu", "syscon";
 		reg = <0xff910000 0x4000>;
 	};
 
@@ -272,7 +571,8 @@
 	cru: clock-controller@ff9a0000 {
 		compatible = "rockchip,rk3506-cru";
 		reg = <0xff9a0000 0x20000>;
-		rockchip,grf = <&grf>;
+		clocks = <&xin24m>;
+		clock-names = "xin";
 		#clock-cells = <1>;
 		#reset-cells = <1>;
 
