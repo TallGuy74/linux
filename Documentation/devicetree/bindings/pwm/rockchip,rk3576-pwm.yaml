@@ -20,8 +20,12 @@ allOf:
 
 properties:
   compatible:
-    items:
+    oneOf:
       - const: rockchip,rk3576-pwm
+      - items:
+          - enum:
+              - rockchip,rk3506-pwm
+          - const: rockchip,rk3576-pwm
 
   reg:
     maxItems: 1
