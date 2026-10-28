@@ -76,6 +76,7 @@ static const struct of_device_id allowlist[] __initconst = {
 	{ .compatible = "rockchip,rk3328", },
 	{ .compatible = "rockchip,rk3366", },
 	{ .compatible = "rockchip,rk3368", },
+	{ .compatible = "rockchip,rk3506", },
 	{ .compatible = "rockchip,rk3399",
 	  .data = &(struct cpufreq_dt_platform_data)
 		{ .have_governor_per_policy = true, },
