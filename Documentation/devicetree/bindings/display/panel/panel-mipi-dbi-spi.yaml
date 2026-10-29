@@ -72,6 +72,7 @@ properties:
   compatible:
     items:
       - enum:
+          - luckfox,lyra-plc-lcd
           - saef,sftc154b
           - sainsmart18
           - shineworld,lh133k
