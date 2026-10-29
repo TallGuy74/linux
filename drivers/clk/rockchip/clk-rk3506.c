@@ -242,8 +242,17 @@ static struct rockchip_clk_branch rk3506_clk_branches[] __initdata = {
 	GATE(CLK_REF_DPHY_TOP, "clk_ref_dphy_top", "xin24m", 0,
 			RK3506_CLKGATE_CON(1), 5, GFLAGS),
 
-	/* core */
-	COMPOSITE_NOGATE(0, "armclk_pll", gpll_v0pll_v1pll_parents_p, CLK_IS_CRITICAL,
+	/*
+	 * core
+	 *
+	 * The PLL inputs of the core source mux pass through the PLL output
+	 * gates: closing clk_v1pll_gate while the cores run from v1pll stops
+	 * the cores (verified on a Luckfox Lyra, the board freezes at once).
+	 * Model the gated outputs as the parents so that selecting a PLL for
+	 * the cores keeps its gate open and clk_disable_unused() leaves it
+	 * alone; gpll and v0pll are critical anyway, v1pll is not.
+	 */
+	COMPOSITE_NOGATE(0, "armclk_pll", gpll_v0pll_v1pll_g_parents_p, CLK_IS_CRITICAL,
 			RK3506_CLKSEL_CON(15), 5, 2, MFLAGS, 0, 5, DFLAGS),
 	COMPOSITE_NOMUX(ACLK_CORE_ROOT, "aclk_core_root", "armclk", CLK_IGNORE_UNUSED,
 			RK3506_CLKSEL_CON(15), 9, 4, DFLAGS | CLK_DIVIDER_READ_ONLY,
