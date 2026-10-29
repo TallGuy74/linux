@@ -826,6 +826,8 @@ int fbtft_unregister_framebuffer(struct fb_info *fb_info)
 
 	if (par->fbtftops.unregister_backlight)
 		par->fbtftops.unregister_backlight(par);
+	else if (fb_info->bl_dev)
+		backlight_disable(fb_info->bl_dev);
 	fbtft_sysfs_exit(par);
 	unregister_framebuffer(fb_info);
 
@@ -1103,7 +1105,14 @@ static struct fbtft_platform_data *fbtft_properties_read(struct device *dev)
 	pdata->display.height = fbtft_property_value(dev, "height");
 	pdata->display.regwidth = fbtft_property_value(dev, "regwidth");
 	pdata->display.buswidth = fbtft_property_value(dev, "buswidth");
-	pdata->display.backlight = fbtft_property_value(dev, "backlight");
+	/*
+	 * "backlight" is the legacy fbtft integer selecting the GPIO LED
+	 * backlight type; it only means something together with led-gpios.
+	 * Without that GPIO the property is a phandle to a backlight device
+	 * as in the common panel bindings (see fbtft_probe_common()).
+	 */
+	if (device_property_present(dev, "led-gpios"))
+		pdata->display.backlight = fbtft_property_value(dev, "backlight");
 	pdata->display.bpp = fbtft_property_value(dev, "bpp");
 	pdata->display.debug = fbtft_property_value(dev, "debug");
 	pdata->rotate = fbtft_property_value(dev, "rotate");
@@ -1165,6 +1174,22 @@ int fbtft_probe_common(struct fbtft_display *display,
 	par = info->par;
 	par->spi = sdev;
 	par->pdev = pdev;
+
+	/*
+	 * A backlight referenced from the panel node belongs to this display:
+	 * drivers like pwm-backlight leave a backlight that is referenced by a
+	 * phandle switched off until its display driver enables it.
+	 */
+	if (!display->backlight) {
+		struct backlight_device *bl = devm_of_find_backlight(dev);
+
+		if (IS_ERR(bl)) {
+			ret = dev_err_probe(dev, PTR_ERR(bl),
+					    "failed to get backlight\n");
+			goto out_release;
+		}
+		info->bl_dev = bl;
+	}
 
 	if (display->buswidth == 0) {
 		ret = dev_err_probe(dev, -EINVAL, "buswidth is not set\n");
