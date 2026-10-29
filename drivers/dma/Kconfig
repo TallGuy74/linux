@@ -376,6 +376,16 @@ config K3_DMA
 	  Support the DMA engine for Hisilicon K3 platform
 	  devices.
 
+config ROCKCHIP_DMAMUX
+	bool "Rockchip RK3506 DMA request-line mux for PL330"
+	depends on ARCH_ROCKCHIP || COMPILE_TEST
+	depends on OF && PL330_DMA
+	select MFD_SYSCON
+	help
+	  Enable the request-line multiplexer in front of the first PL330 DMA
+	  controller of the Rockchip RK3506, which selects the peripheral that
+	  drives each DMA request line.
+
 config LPC18XX_DMAMUX
 	bool "NXP LPC18xx/43xx DMA MUX for PL080"
 	depends on ARCH_LPC18XX || COMPILE_TEST
