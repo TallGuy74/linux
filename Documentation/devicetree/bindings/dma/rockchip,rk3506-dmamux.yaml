@@ -1,0 +1,57 @@
+# SPDX-License-Identifier: (GPL-2.0-only OR BSD-2-Clause)
+%YAML 1.2
+---
+$id: http://devicetree.org/schemas/dma/rockchip,rk3506-dmamux.yaml#
+$schema: http://devicetree.org/meta-schemas/core.yaml#
+
+title: Rockchip RK3506 DMAC0 request-line multiplexer
+
+maintainers:
+  - Bas Vermeulen <bas.vermeulen@blackstar.nl>
+
+description:
+  Each request line of the first PL330 DMA controller of the RK3506 can be
+  driven by one of up to four peripherals, selected by a two-bit field per
+  line in the GRF. A peripheral names the request line it is wired to and
+  the select value of that line in its dmas property.
+
+allOf:
+  - $ref: dma-router.yaml#
+
+properties:
+  compatible:
+    const: rockchip,rk3506-dmamux
+
+  '#dma-cells':
+    const: 2
+    description:
+      The first cell is the DMAC0 request line, the second the value that
+      selects the peripheral on that line.
+
+  dma-masters:
+    maxItems: 1
+
+  dma-requests:
+    description: Number of request lines of the DMA controller.
+    default: 12
+
+  rockchip,grf:
+    $ref: /schemas/types.yaml#/definitions/phandle
+    description: Phandle to the General Register Files holding the mux.
+
+required:
+  - compatible
+  - '#dma-cells'
+  - dma-masters
+  - rockchip,grf
+
+unevaluatedProperties: false
+
+examples:
+  - |
+    dmamux0: dma-router {
+        compatible = "rockchip,rk3506-dmamux";
+        #dma-cells = <2>;
+        dma-masters = <&dmac0>;
+        rockchip,grf = <&grf>;
+    };
