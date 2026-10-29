@@ -50,14 +50,20 @@
 	/*
 	 * GPIO1_C5 is the power enable of the AIC8800DC Wi-Fi/BT module (the
 	 * vendor tree calls it BT,power_gpio and lets rfkill raise it; the chip
-	 * only shows up on the USB hub once it is high). The module carries
-	 * both radios, so this one switch cuts Bluetooth too.
+	 * only shows up on the USB hub once it is high). Described as the
+	 * module's supply, switched by the onboard USB device driver from the
+	 * hub's port node below; the module carries both radios, so this one
+	 * rail cuts Bluetooth too.
 	 */
-	rfkill-wlan {
-		compatible = "rfkill-gpio";
-		label = "aic8800-power";
-		radio-type = "wlan";
-		shutdown-gpios = <&gpio1 RK_PC5 GPIO_ACTIVE_HIGH>;
+	vcc_wifi: regulator-wifi {
+		compatible = "regulator-fixed";
+		regulator-name = "vcc_wifi";
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		gpio = <&gpio1 RK_PC5 GPIO_ACTIVE_HIGH>;
+		enable-active-high;
+		startup-delay-us = <100000>;
+		vin-supply = <&vcc_3v3>;
 	};
 
 	backlight: backlight {
@@ -340,7 +346,25 @@
 
 &usb_otg1 {
 	dr_mode = "host";
+	#address-cells = <1>;
+	#size-cells = <0>;
 	status = "okay";
+
+	/* WCH CH334 four-port hub; the Wi-Fi/BT module hangs off its port 1 */
+	hub_2_0: hub@1 {
+		compatible = "usb1a86,8091";
+		reg = <1>;
+		vdd33-supply = <&vcc_3v3>;
+		v5-supply = <&vcc_3v3>;
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		wifi: wifi@1 {
+			compatible = "usba69c,88dc";
+			reg = <1>;
+			vdd-supply = <&vcc_wifi>;
+		};
+	};
 };
 
 &wdt0 {
