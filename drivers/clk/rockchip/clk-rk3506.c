@@ -164,7 +164,8 @@ static struct rockchip_pll_clock rk3506_pll_clks[] __initdata = {
 };
 
 static struct rockchip_clk_branch rk3506_armclk __initdata =
-	MUX(ARMCLK, "armclk", mux_armclk_p, CLK_IS_CRITICAL | CLK_SET_RATE_PARENT,
+	MUX(ARMCLK, "armclk", mux_armclk_p, CLK_IS_CRITICAL | CLK_SET_RATE_PARENT |
+	    CLK_SET_RATE_NO_REPARENT,
 			RK3506_CLKSEL_CON(15), 8, 1, MFLAGS);
 
 static struct rockchip_clk_branch rk3506_clk_branches[] __initdata = {
@@ -242,7 +243,8 @@ static struct rockchip_clk_branch rk3506_clk_branches[] __initdata = {
 			RK3506_CLKGATE_CON(1), 5, GFLAGS),
 
 	/* core */
-	COMPOSITE_NOGATE(0, "armclk_pll", gpll_v0pll_v1pll_parents_p, CLK_IS_CRITICAL,
+	COMPOSITE_NOGATE(0, "armclk_pll", gpll_v0pll_v1pll_parents_p,
+			CLK_IS_CRITICAL | CLK_SET_RATE_PARENT | CLK_SET_RATE_NO_REPARENT,
 			RK3506_CLKSEL_CON(15), 5, 2, MFLAGS, 0, 5, DFLAGS),
 	COMPOSITE_NOMUX(ACLK_CORE_ROOT, "aclk_core_root", "armclk", CLK_IGNORE_UNUSED,
 			RK3506_CLKSEL_CON(15), 9, 4, DFLAGS | CLK_DIVIDER_READ_ONLY,
@@ -807,6 +809,17 @@ static void __init rk3506_clk_init(struct device_node *np)
 	rockchip_clk_register_plls(ctx, rk3506_pll_clks,
 				   ARRAY_SIZE(rk3506_pll_clks),
 				   0);
+
+	/*
+	 * The boot loader runs the cores from the PVTPLL, which has no clock
+	 * provider here, so armclk would read as 0 Hz and cpufreq could not
+	 * work. Move the PLL path to v1pll (nothing else depends on it) with a
+	 * safe divider, then switch the cores over to it; cpufreq takes the
+	 * rate from there and re-rates v1pll through CLK_SET_RATE_PARENT.
+	 */
+	writel_relaxed(HIWORD_UPDATE(2, 0x3, 5) | HIWORD_UPDATE(3, 0x1f, 0),
+		       reg_base + RK3506_CLKSEL_CON(15));
+	writel_relaxed(HIWORD_UPDATE(0, 0x1, 8), reg_base + RK3506_CLKSEL_CON(15));
 
 	rockchip_clk_register_armclk_multi_pll(ctx, &rk3506_armclk,
 					       rk3506_cpuclk_rates,
