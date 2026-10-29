@@ -278,29 +278,41 @@
 	status = "okay";
 };
 
-/* 1.9" 170x320 ST7789V panel, fbtft */
+/* 1.9" 170x320 ST7789V panel, mounted landscape */
 &spi0 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&rm_io1_spi0_clk>, <&rm_io4_spi0_mosi>, <&rm_io3_spi0_csn0>;
 	status = "okay";
 
 	display@0 {
-		compatible = "sitronix,st7789v";
+		compatible = "luckfox,lyra-plc-lcd", "panel-mipi-dbi-spi";
 		reg = <0>;
 		spi-max-frequency = <50000000>;
+		dc-gpios = <&gpio0 RK_PA2 GPIO_ACTIVE_HIGH>;
+		/* the reset is active low, but mipi_dbi drives the line as "running" */
+		reset-gpios = <&gpio0 RK_PA0 GPIO_ACTIVE_HIGH>;
+		write-only;
 		power-supply = <&vcc_3v3>;
 		backlight = <&backlight>;
-		/* fbtft (staging) properties; the sitronix,st7789v panel schema does not know them */
-		buswidth = <8>;
-		fps = <60>;
-		/* 1.9" 170x320 glass at columns 35..204 of the controller's 240x320 RAM */
-		width = <170>;
-		height = <320>;
-		col-offset = <35>;
-		/* 170x320 glass mounted landscape: rotate the framebuffer (degrees) */
-		rotate = <270>;
-		dc-gpios = <&gpio0 RK_PA2 GPIO_ACTIVE_HIGH>;
-		reset-gpios = <&gpio0 RK_PA0 GPIO_ACTIVE_LOW>;
+		width-mm = <43>;
+		height-mm = <23>;
+
+		/*
+		 * The init sequence in the firmware file sets the address mode
+		 * to landscape (MV | MX), where the 170 visible rows start at
+		 * row 35 of the controller's 240x320 RAM.
+		 */
+		panel-timing {
+			hactive = <320>;
+			vactive = <170>;
+			hback-porch = <0>;
+			vback-porch = <35>;
+			clock-frequency = <0>;
+			hfront-porch = <0>;
+			hsync-len = <0>;
+			vfront-porch = <0>;
+			vsync-len = <0>;
+		};
 	};
 };
 
