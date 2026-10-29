@@ -165,6 +165,7 @@ struct rockchip_thermal_data {
 
 	struct clk *clk;
 	struct clk *pclk;
+	struct clk *tsen_clk;
 
 	struct regmap *grf;
 	void __iomem *regs;
@@ -1802,6 +1803,12 @@ static int rockchip_thermal_probe(struct platform_device *pdev)
 	if (IS_ERR(thermal->pclk))
 		return dev_err_probe(&pdev->dev, PTR_ERR(thermal->pclk),
 				     "failed to get apb_pclk clock.\n");
+
+	/* Some SoCs (RK3506) clock the sensor's analogue block separately. */
+	thermal->tsen_clk = devm_clk_get_optional_enabled(&pdev->dev, "tsen");
+	if (IS_ERR(thermal->tsen_clk))
+		return dev_err_probe(&pdev->dev, PTR_ERR(thermal->tsen_clk),
+				     "failed to get tsen clock\n");
 
 	rockchip_thermal_reset_controller(thermal->reset);
 

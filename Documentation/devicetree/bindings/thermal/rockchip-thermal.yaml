@@ -34,12 +34,14 @@ properties:
 
   clocks:
     minItems: 2
-    maxItems: 2
+    maxItems: 3
 
   clock-names:
+    minItems: 2
     items:
       - const: tsadc
       - const: apb_pclk
+      - const: tsen
 
   nvmem-cells:
     items:
