@@ -284,6 +284,7 @@
 		reg = <0>;
 		spi-max-frequency = <50000000>;
 		power-supply = <&vcc_3v3>;
+		backlight = <&backlight>;
 		/* fbtft (staging) properties; the sitronix,st7789v panel schema does not know them */
 		buswidth = <8>;
 		fps = <60>;
