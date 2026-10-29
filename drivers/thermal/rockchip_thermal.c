@@ -223,6 +223,7 @@ struct rockchip_thermal_data {
 #define TSADCV2_AUTO_TSHUT_POLARITY_MASK	BIT(24)
 
 #define TSADCV3_AUTO_Q_SEL_EN			BIT(1)
+#define TSADCV3_AUTO_Q_SEL_EN_MASK		BIT(17)
 
 #define TSADCV2_INT_SRC_EN(chn)			BIT(chn)
 #define TSADCV2_INT_SRC_EN_MASK(chn)		BIT(16 + (chn))
@@ -870,6 +871,12 @@ static void rk_tsadcv9_initialize(struct regmap *grf, void __iomem *regs,
 			       regs + TSADCV2_AUTO_CON);
 	else
 		writel_relaxed(TSADCV2_AUTO_TSHUT_POLARITY_MASK, regs + TSADCV2_AUTO_CON);
+	/*
+	 * Select the quantised conversion the code table was made for;
+	 * without it the sensor reads some 40 degrees low.
+	 */
+	writel_relaxed(TSADCV3_AUTO_Q_SEL_EN | TSADCV3_AUTO_Q_SEL_EN_MASK,
+		       regs + TSADCV2_AUTO_CON);
 }
 
 static void rk_tsadcv8_initialize(struct regmap *grf, void __iomem *regs,
