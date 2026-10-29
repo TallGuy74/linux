@@ -59,6 +59,13 @@ static const struct onboard_dev_pdata realtek_rtl8188etv_data = {
 	.is_hub = false,
 };
 
+static const struct onboard_dev_pdata aicsemi_aic8800dc_data = {
+	.reset_us = 0,
+	.num_supplies = 1,
+	.supply_names = { "vdd" },
+	.is_hub = false,
+};
+
 static const struct onboard_dev_pdata ti_tusb8020b_data = {
 	.reset_us = 3000,
 	.num_supplies = 1,
@@ -170,6 +177,7 @@ static const struct of_device_id onboard_dev_match[] = {
 	{ .compatible = "usb3431,6241", .data = &corechips_sl6341_data, },
 	{ .compatible = "usb3431,6341", .data = &corechips_sl6341_data, },
 	{ .compatible = "usb5986,1198", .data = &bison_intcamera_data, },
+	{ .compatible = "usba69c,88dc", .data = &aicsemi_aic8800dc_data, },
 	{}
 };
 
