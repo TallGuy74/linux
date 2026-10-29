@@ -723,8 +723,8 @@
 		compatible = "rockchip,rk3506-tsadc";
 		reg = <0xff650000 0x400>;
 		interrupts = <GIC_SPI 58 IRQ_TYPE_LEVEL_HIGH>;
-		clocks = <&cru CLK_TSADC>, <&cru PCLK_TSADC>;
-		clock-names = "tsadc", "apb_pclk";
+		clocks = <&cru CLK_TSADC>, <&cru PCLK_TSADC>, <&cru CLK_TSADC_TSEN>;
+		clock-names = "tsadc", "apb_pclk", "tsen";
 		assigned-clocks = <&cru CLK_TSADC>, <&cru CLK_TSADC_TSEN>;
 		assigned-clock-rates = <1000000>, <12000000>;
 		resets = <&cru SRST_P_TSADC>, <&cru SRST_TSADC>;
