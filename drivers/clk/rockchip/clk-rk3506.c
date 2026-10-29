@@ -4,6 +4,7 @@
  * Author: Finley Xiao <finley.xiao@rock-chips.com>
  */
 
+#include <linux/clk.h>
 #include <linux/clk-provider.h>
 #include <linux/module.h>
 #include <linux/of.h>
@@ -100,6 +101,7 @@ static struct rockchip_cpuclk_rate_table rk3506_cpuclk_rates[] __initdata = {
 	RK3506_CPUCLK_RATE(903168000, 1, 7),
 	RK3506_CPUCLK_RATE(800000000, 1, 6),
 	RK3506_CPUCLK_RATE(750000000, 1, 5),
+	RK3506_CPUCLK_RATE(600000000, 1, 4),
 	RK3506_CPUCLK_RATE(589824000, 1, 4),
 	RK3506_CPUCLK_RATE(400000000, 1, 3),
 	RK3506_CPUCLK_RATE(200000000, 1, 1),
@@ -145,7 +147,13 @@ PNAME(clk_32k_frac_parents_p)			= { "xin24m", "v0pll", "v1pll", "clk_rc" };
 PNAME(clk_32k_parents_p)			= { "xin32k", "clk_32k_rc", "clk_32k_frac" };
 PNAME(clk_ref_phy_pmu_mux_parents_p)		= { "xin24m", "clk_ref_phy_pll" };
 PNAME(clk_vpll_ref_parents_p)			= { "xin24m", "clk_pll_ref_io" };
-PNAME(mux_armclk_p)				= { "armclk_pll", "clk_core_pvtpll" };
+/*
+ * The PLL inputs of the core source mux pass through the PLL output gates:
+ * closing clk_v1pll_gate while the cores run from v1pll stops the cores
+ * (verified on a Luckfox Lyra, the board freezes at once). Model the gated
+ * outputs as the parents so that the cores keep the gate of their PLL open.
+ */
+PNAME(mux_armclk_p)				= { "clk_gpll_gate", "clk_v0pll_gate", "clk_v1pll_gate" };
 
 #define MFLAGS CLK_MUX_HIWORD_MASK
 #define DFLAGS CLK_DIVIDER_HIWORD_MASK
@@ -163,10 +171,23 @@ static struct rockchip_pll_clock rk3506_pll_clks[] __initdata = {
 		     RK3506_MODE_CON, 4, 1, 0, rk3506_pll_rates),
 };
 
-static struct rockchip_clk_branch rk3506_armclk __initdata =
-	MUX(ARMCLK, "armclk", mux_armclk_p, CLK_IS_CRITICAL | CLK_SET_RATE_PARENT |
-	    CLK_SET_RATE_NO_REPARENT,
-			RK3506_CLKSEL_CON(15), 8, 1, MFLAGS);
+/*
+ * armclk is the classic Rockchip CPU clock: it runs from v1pll, which cpufreq
+ * re-rates for every operating point, and parks on gpll (behind a divider
+ * that keeps it at or below the old rate) while v1pll relocks. v1pll feeds
+ * nothing else that minds (clk_can0/1 are assigned to v0pll in the dtsi).
+ */
+static const struct rockchip_cpuclk_reg_data rk3506_cpuclk_data = {
+	.core_reg[0] = RK3506_CLKSEL_CON(15),
+	.div_core_shift[0] = 0,
+	.div_core_mask[0] = 0x1f,
+	.num_cores = 1,
+	.mux_core_reg = RK3506_CLKSEL_CON(15),
+	.mux_core_alt = 0,
+	.mux_core_main = 2,
+	.mux_core_shift = 5,
+	.mux_core_mask = 0x3,
+};
 
 static struct rockchip_clk_branch rk3506_clk_branches[] __initdata = {
 	/*
@@ -179,7 +200,7 @@ static struct rockchip_clk_branch rk3506_clk_branches[] __initdata = {
 			RK3506_CLKGATE_CON(0), 2, GFLAGS),
 	GATE(CLK_V0PLL_GATE, "clk_v0pll_gate", "v0pll", CLK_IS_CRITICAL,
 			RK3506_CLKGATE_CON(0), 3, GFLAGS),
-	GATE(CLK_V1PLL_GATE, "clk_v1pll_gate", "v1pll", 0,
+	GATE(CLK_V1PLL_GATE, "clk_v1pll_gate", "v1pll", CLK_SET_RATE_PARENT,
 			RK3506_CLKGATE_CON(0), 4, GFLAGS),
 	COMPOSITE_NOMUX(CLK_GPLL_DIV, "clk_gpll_div", "clk_gpll_gate", CLK_IS_CRITICAL,
 			RK3506_CLKSEL_CON(0), 6, 4, DFLAGS,
@@ -242,18 +263,7 @@ static struct rockchip_clk_branch rk3506_clk_branches[] __initdata = {
 	GATE(CLK_REF_DPHY_TOP, "clk_ref_dphy_top", "xin24m", 0,
 			RK3506_CLKGATE_CON(1), 5, GFLAGS),
 
-	/*
-	 * core
-	 *
-	 * The PLL inputs of the core source mux pass through the PLL output
-	 * gates: closing clk_v1pll_gate while the cores run from v1pll stops
-	 * the cores (verified on a Luckfox Lyra, the board freezes at once).
-	 * Model the gated outputs as the parents so that selecting a PLL for
-	 * the cores keeps its gate open and clk_disable_unused() leaves it
-	 * alone; gpll and v0pll are critical anyway, v1pll is not.
-	 */
-	COMPOSITE_NOGATE(0, "armclk_pll", gpll_v0pll_v1pll_g_parents_p, CLK_IS_CRITICAL,
-			RK3506_CLKSEL_CON(15), 5, 2, MFLAGS, 0, 5, DFLAGS),
+	/* core: the source mux and divider in CLKSEL_CON15 belong to armclk */
 	COMPOSITE_NOMUX(ACLK_CORE_ROOT, "aclk_core_root", "armclk", CLK_IGNORE_UNUSED,
 			RK3506_CLKSEL_CON(15), 9, 4, DFLAGS | CLK_DIVIDER_READ_ONLY,
 			RK3506_CLKGATE_CON(2), 11, GFLAGS),
@@ -497,12 +507,12 @@ static struct rockchip_clk_branch rk3506_clk_branches[] __initdata = {
 			RK3506_CLKGATE_CON(13), 3, GFLAGS),
 	GATE(HCLK_CAN0, "hclk_can0", "hclk_lsperi_root", 0,
 			RK3506_CLKGATE_CON(13), 4, GFLAGS),
-	COMPOSITE(CLK_CAN0, "clk_can0", clk_can_parents_p, 0,
+	COMPOSITE(CLK_CAN0, "clk_can0", clk_can_parents_p, CLK_SET_RATE_NO_REPARENT,
 			RK3506_CLKSEL_CON(35), 11, 3, MFLAGS, 6, 5, DFLAGS,
 			RK3506_CLKGATE_CON(13), 5, GFLAGS),
 	GATE(HCLK_CAN1, "hclk_can1", "hclk_lsperi_root", 0,
 			RK3506_CLKGATE_CON(13), 6, GFLAGS),
-	COMPOSITE(CLK_CAN1, "clk_can1", clk_can_parents_p, 0,
+	COMPOSITE(CLK_CAN1, "clk_can1", clk_can_parents_p, CLK_SET_RATE_NO_REPARENT,
 			RK3506_CLKSEL_CON(36), 5, 3, MFLAGS, 0, 5, DFLAGS,
 			RK3506_CLKGATE_CON(13), 7, GFLAGS),
 	GATE(HCLK_PDM, "hclk_pdm", "hclk_lsperi_root", 0,
@@ -821,19 +831,29 @@ static void __init rk3506_clk_init(struct device_node *np)
 	/*
 	 * The boot loader runs the cores from the PVTPLL, which has no clock
 	 * provider here, so armclk would read as 0 Hz and cpufreq could not
-	 * work. Switch the cores to the PLL path (armclk_pll, left by the boot
-	 * loader on gpll with a safe divider). cpufreq then reaches its rates
-	 * by muxing armclk_pll between the PLLs at their fixed rates and by
-	 * dividing; a PLL feeding the cores is never re-rated.
+	 * work. Bring v1pll to a known rate and move the cores to it through
+	 * the PLL path (bit 8 off), divided by two so that the step is safe at
+	 * whatever core voltage the boot loader left; the cpuclk below then
+	 * owns v1pll and this mux/divider, and cpufreq takes it from there.
 	 */
-	writel_relaxed(HIWORD_UPDATE(0, 0x1, 8), reg_base + RK3506_CLKSEL_CON(15));
-
-	rockchip_clk_register_armclk_multi_pll(ctx, &rk3506_armclk,
-					       rk3506_cpuclk_rates,
-					       ARRAY_SIZE(rk3506_cpuclk_rates));
+	clk_set_rate(ctx->clk_data.clks[PLL_V1PLL], 1200000000);
+	writel_relaxed(HIWORD_UPDATE((2 << 5) | 1, 0x17f, 0),
+		       reg_base + RK3506_CLKSEL_CON(15));
 
 	rockchip_clk_register_branches(ctx, rk3506_clk_branches,
 				       ARRAY_SIZE(rk3506_clk_branches));
+
+	/*
+	 * After the branches: armclk's parents are the PLL output gates. Keep
+	 * it enabled so that clk_disable_unused() never closes the gate of the
+	 * PLL the cores run from (nothing else holds it, cpufreq only sets
+	 * rates).
+	 */
+	rockchip_clk_register_armclk(ctx, ARMCLK, "armclk",
+				     mux_armclk_p, ARRAY_SIZE(mux_armclk_p),
+				     &rk3506_cpuclk_data, rk3506_cpuclk_rates,
+				     ARRAY_SIZE(rk3506_cpuclk_rates));
+	clk_prepare_enable(ctx->clk_data.clks[ARMCLK]);
 
 	rk3506_rst_init(np, reg_base);
 
