@@ -76,28 +76,54 @@
 	};
 
 	/*
-	 * cpufreq muxes the cores between the PLLs at fixed rates, so the
-	 * points are what gpll (1.5 GHz) and v1pll (pinned to 1.2 GHz by the
-	 * CRU node) divide to and the armclk table knows. 850 mV covers all of
-	 * them in the vendor tree.
+	 * The vendor tree's points and base voltages (it lowers them per chip
+	 * from OTP data, which is not modelled here). armclk re-rates v1pll for
+	 * each point and parks the cores on gpll meanwhile.
 	 */
 	cpu0_opp_table: opp-table-cpu {
 		compatible = "operating-points-v2";
 		opp-shared;
 
-		opp-400000000 {
-			opp-hz = /bits/ 64 <400000000>;
+		opp-600000000 {
+			opp-hz = /bits/ 64 <600000000>;
+			opp-microvolt = <850000 850000 1207000>;
+			clock-latency-ns = <40000>;
+			opp-suspend;
+		};
+
+		opp-800000000 {
+			opp-hz = /bits/ 64 <800000000>;
 			opp-microvolt = <850000 850000 1207000>;
 			clock-latency-ns = <40000>;
 		};
-		opp-750000000 {
-			opp-hz = /bits/ 64 <750000000>;
+
+		opp-1008000000 {
+			opp-hz = /bits/ 64 <1008000000>;
 			opp-microvolt = <850000 850000 1207000>;
 			clock-latency-ns = <40000>;
 		};
+
 		opp-1200000000 {
 			opp-hz = /bits/ 64 <1200000000>;
 			opp-microvolt = <850000 850000 1207000>;
+			clock-latency-ns = <40000>;
+		};
+
+		opp-1296000000 {
+			opp-hz = /bits/ 64 <1296000000>;
+			opp-microvolt = <900000 900000 1207000>;
+			clock-latency-ns = <40000>;
+		};
+
+		opp-1416000000 {
+			opp-hz = /bits/ 64 <1416000000>;
+			opp-microvolt = <937500 937500 1207000>;
+			clock-latency-ns = <40000>;
+		};
+
+		opp-1512000000 {
+			opp-hz = /bits/ 64 <1512000000>;
+			opp-microvolt = <975000 975000 1207000>;
 			clock-latency-ns = <40000>;
 		};
 	};
@@ -553,6 +579,10 @@
 		interrupts = <GIC_SPI 45 IRQ_TYPE_LEVEL_HIGH>;
 		clocks = <&cru CLK_CAN0>, <&cru HCLK_CAN0>;
 		clock-names = "baudclk", "apb_pclk";
+		/* keep the bit clock off v1pll, which cpufreq re-rates */
+		assigned-clocks = <&cru CLK_CAN0>;
+		assigned-clock-parents = <&cru CLK_V0PLL_GATE>;
+		assigned-clock-rates = <300000000>;
 		resets = <&cru SRST_CAN0>, <&cru SRST_H_CAN0>;
 		reset-names = "can", "can-apb";
 		status = "disabled";
@@ -564,6 +594,10 @@
 		interrupts = <GIC_SPI 46 IRQ_TYPE_LEVEL_HIGH>;
 		clocks = <&cru CLK_CAN1>, <&cru HCLK_CAN1>;
 		clock-names = "baudclk", "apb_pclk";
+		/* keep the bit clock off v1pll, which cpufreq re-rates */
+		assigned-clocks = <&cru CLK_CAN1>;
+		assigned-clock-parents = <&cru CLK_V0PLL_GATE>;
+		assigned-clock-rates = <300000000>;
 		resets = <&cru SRST_CAN1>, <&cru SRST_H_CAN1>;
 		reset-names = "can", "can-apb";
 		status = "disabled";
@@ -811,12 +845,10 @@
 		 */
 		assigned-clocks =
 			<&cru CLK_FRAC_UART_MATRIX0>,
-			<&cru CLK_FRAC_UART_MATRIX1>,
-			<&cru PLL_V1PLL>;
+			<&cru CLK_FRAC_UART_MATRIX1>;
 		assigned-clock-rates =
 			<96000000>,
-			<128000000>,
-			<1200000000>;
+			<128000000>;
 	};
 
 	pinctrl: pinctrl {
