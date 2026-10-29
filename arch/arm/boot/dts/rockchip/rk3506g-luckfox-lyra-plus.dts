@@ -90,3 +90,45 @@
 	dr_mode = "peripheral";
 	status = "okay";
 };
+
+/*
+ * RMII PHY at address 1 on the second GMAC, as the vendor board dts: the
+ * MAC drives the reference clock, the PHY reset is GPIO1_D0 (20 ms
+ * asserted, 100 ms to settle).
+ */
+&gmac1 {
+	clock_in_out = "output";
+	phy-handle = <&rmii_phy1>;
+	phy-mode = "rmii";
+	pinctrl-names = "default";
+	pinctrl-0 = <&eth_rmii1_miim_pins>, <&eth_rmii1_tx_bus2_pins>,
+		    <&eth_rmii1_rx_bus2_pins>, <&eth_rmii1_clk_pins>;
+	status = "okay";
+};
+
+&mdio1 {
+	rmii_phy1: ethernet-phy@1 {
+		compatible = "ethernet-phy-ieee802.3-c22";
+		reg = <1>;
+		reset-gpios = <&gpio1 RK_PD0 GPIO_ACTIVE_LOW>;
+		reset-assert-us = <20000>;
+		reset-deassert-us = <100000>;
+	};
+};
+
+&u2phy {
+	status = "okay";
+};
+
+&u2phy_otg0 {
+	status = "okay";
+};
+
+&u2phy_otg1 {
+	status = "okay";
+};
+
+&usb_otg1 {
+	dr_mode = "host";
+	status = "okay";
+};
